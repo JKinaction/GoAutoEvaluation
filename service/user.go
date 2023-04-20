@@ -12,12 +12,7 @@ import (
 )
 
 func LoginService(login dto.LoginDto) response.ResponseStruct {
-	res := response.ResponseStruct{
-		HttpStatus: http.StatusOK,
-		Code:       response.SuccessCode,
-		Data:       nil,
-		Msg:        response.OK,
-	}
+	res := response.NewResponse()
 	var user model.User
 	DB := common.GetDB()
 	DB.Where("username = ?", login.Username).First(&user)
@@ -37,13 +32,8 @@ func LoginService(login dto.LoginDto) response.ResponseStruct {
 	return res
 }
 
-func RegisterService(user dto.LoginDto) response.ResponseStruct {
-	res := response.ResponseStruct{
-		HttpStatus: http.StatusOK,
-		Code:       response.SuccessCode,
-		Data:       nil,
-		Msg:        response.OK,
-	}
+func RegisterService(user dto.RegisterDto) response.ResponseStruct {
+	res := response.NewResponse()
 	DB := common.GetDB()
 
 	//用户是否存在

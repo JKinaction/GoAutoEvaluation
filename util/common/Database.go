@@ -12,7 +12,7 @@ import (
 
 var DB *gorm.DB
 
-func InitDB() *gorm.DB {
+func InitDB() {
 	host := viper.GetString("datasource.host")
 	port := viper.GetString("datasource.port")
 	database := viper.GetString("datasource.database")
@@ -41,7 +41,6 @@ func InitDB() *gorm.DB {
 	db.AutoMigrate(&model.User{})
 
 	DB = db
-	return db
 }
 
 func GetDB() *gorm.DB {

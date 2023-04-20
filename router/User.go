@@ -1,7 +1,7 @@
 package router
 
 import (
-	"demo1/controller"
+	"domo1/controller"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,9 +13,9 @@ func GetUserRoutes(route *gin.RouterGroup) {
 		user.POST("/login", controller.Login)
 	}
 
-	question := route.Group("question")
-	{
-		question.GET("/question", controller.GetQuestion)
-		question.GET("/question-list", controller.GetQuestionList)
-	}
+	// question := route.Group("question")
+	// {
+	// 	question.GET("/question", controller.GetQuestion)
+	// 	question.GET("/question-list", controller.GetQuestionList)
+	// }
 }

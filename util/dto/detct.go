@@ -1,15 +1,15 @@
 package dto
 
 type CodeDto struct {
-	Userid    string
-	Problemid string
-	Code      string
+	Userid     int
+	Questionid int
+	Code       string
 }
 
 type FuncVarDto struct {
-	Userid    string
-	Problemid string
-	Funcs     []string
-	Vars      []string
-	Code      string
+	Userid     int
+	Questionid int
+	Funcs      []string
+	Vars       []string
+	Code       string
 }

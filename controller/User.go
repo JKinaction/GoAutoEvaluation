@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"domo1/dto"
 	"domo1/service"
+	"domo1/util/dto"
 	"domo1/util/response"
 
 	"github.com/gin-gonic/gin"
@@ -15,7 +15,7 @@ func Login(ctx *gin.Context) {
 		response.Fail(ctx, nil, response.RequestError)
 		return
 	}
-	if len(request.password) < 3 {
+	if len(request.Password) < 3 {
 		response.CheckFail(ctx, nil, response.PasswordCheck)
 		return
 	}
@@ -32,7 +32,7 @@ func Register(ctx *gin.Context) {
 		return
 	}
 
-	if len(request.password) < 6 {
+	if len(request.Password) < 6 {
 		response.CheckFail(ctx, nil, response.PasswordCheck)
 		return
 	}

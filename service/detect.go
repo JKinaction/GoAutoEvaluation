@@ -9,7 +9,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -18,18 +17,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// 运行路径./file/user/Userid/Questionid/code.out
+// 输出路径./file/user/Userid/Questionid/user.out
+// 输入路径./file/question/Questionid/Intputanwserid/user.in
+// 对比路径./file/question/Questionid/Intputanwserid/answer.out
 func RuncodeService(request dto.CodeDto) response.ResponseStruct {
-	res := response.ResponseStruct{
-		HttpStatus: http.StatusOK,
-		Code:       response.SuccessCode,
-		Data:       nil,
-		Msg:        response.OK,
-	}
+	res := response.NewResponse()
+
 	userid := request.Userid
-	problemid := request.Problemid
+	questionid := request.Questionid
 	code := request.Code
 
-	filename, err := SaveCode(userid, problemid, code)
+	filename, err := SaveCode(userid, questionid, code)
 	if err != nil {
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
@@ -37,29 +36,44 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 		return res
 	}
 	cmd := exec.Command("go", "run", filename)
-	out, err := os.Create("user.out")
+
+	outpath := fmt.Sprintf("./file/user/%v/%v/user.out", userid, questionid)
+
+	out, err := os.Create(outpath)
 	defer out.Close()
-	if err != nil {
-		log.Fatalln(err)
-	}
-	in, err := os.Open("user.in")
-	defer in.Close()
-	if err != nil {
-		log.Fatalln(err)
-	}
-	var stderr bytes.Buffer
-	cmd.Stdin = in
-	cmd.Stdout = out
-	cmd.Stderr = &stderr
-	err = cmd.Run()
 	if err != nil {
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
 		return res
 	}
+	intputanwserid := 0 //从数据库获取_________________________________________________________
+	inpath := fmt.Sprintf("./file/question/%v/%v/user.in", questionid, intputanwserid)
+	in, err := os.Open(inpath)
+	defer in.Close()
+	if err != nil {
+		res.HttpStatus = http.StatusInternalServerError
+		res.Code = response.ServerErrorCode
+		res.Msg = response.SystemError
+		return res
+	}
+	var stderr bytes.Buffer
+	cmd.Stdin = in
+	cmd.Stdout = out //运行用户代码输出
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+		res.HttpStatus = http.StatusInternalServerError
+		res.Code = response.ServerErrorCode
+		res.Msg = response.SystemError
+		res.Data = gin.H{
+			"err": err,
+		}
+		return res
+	}
 	// read answer file
-	answerBytes, err := ioutil.ReadFile("answer.out")
+	answerpath := fmt.Sprintf("./file/question/%v/%v/answer.out", questionid, intputanwserid)
+	answerBytes, err := ioutil.ReadFile(answerpath)
 	if err != nil {
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
@@ -69,7 +83,7 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 	answer := string(answerBytes)
 
 	// read user output file
-	userBytes, err := ioutil.ReadFile("user.out")
+	userBytes, err := ioutil.ReadFile(outpath)
 	if err != nil {
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
@@ -78,40 +92,41 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 	}
 	user := string(userBytes)
 
-	// match output with regex
+	// match output with regex 改进方法按行读入，再每行split对比——————————————————————————————————————————————————
 	r := regexp.MustCompile(`([\w]+)`)
 
 	answerMatch := r.FindStringSubmatch(answer)
 	userMatch := r.FindStringSubmatch(user)
-	// compare results
-	if answerMatch[0] != userMatch[0] {
-		res.HttpStatus = http.StatusBadRequest
-		res.Code = response.FailCode
-		res.Msg = response.OutputIncorrect
-		return res
+	for i := 0; i < len(answerMatch) && i < len(userMatch); i++ {
+		// compare results
+		if answerMatch[0] != userMatch[0] {
+			res.HttpStatus = http.StatusBadRequest
+			res.Code = response.FailCode
+			res.Msg = response.OutputIncorrect
+			return res
+		}
 	}
+
 	return res
 }
 
 func CheckFuncVarService(request dto.FuncVarDto) response.ResponseStruct {
-	res := response.ResponseStruct{
-		HttpStatus: http.StatusOK,
-		Code:       response.SuccessCode,
-		Data:       nil,
-		Msg:        response.OK,
-	}
+	res := response.NewResponse()
+
 	userid := request.Userid
-	problemid := request.Problemid
+	questionid := request.Questionid
 	inVars := request.Vars
 	inFuncs := request.Funcs
 	code := request.Code
-	filename, err := SaveCode(userid, problemid, code)
+	//保存代码到本地
+	filename, err := SaveCode(userid, questionid, code)
 	if err != nil {
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
 		return res
 	}
+	//查找所有变量和函数
 	vars, funcs, err := SearchFuncVar(filename)
 	if err != nil {
 		res.HttpStatus = http.StatusInternalServerError
@@ -130,7 +145,7 @@ func CheckFuncVarService(request dto.FuncVarDto) response.ResponseStruct {
 	for k := range funcs {
 		for _, v := range inFuncs {
 			if k == v {
-				delete(vars, k)
+				delete(funcs, k)
 			}
 		}
 	}
@@ -141,9 +156,8 @@ func CheckFuncVarService(request dto.FuncVarDto) response.ResponseStruct {
 	return res
 }
 
-func SaveCode(userid, problemid, code string) (string, error) {
-	var filename string
-	filename = fmt.Sprintf("./file/%v/%v/code.out", userid, problemid)
+func SaveCode(userid, questionid int, code string) (string, error) {
+	filename := fmt.Sprintf("./file/user/%v/%v/code.out", userid, questionid)
 	file, err := os.Create(filename)
 	if err != nil {
 		return "", err

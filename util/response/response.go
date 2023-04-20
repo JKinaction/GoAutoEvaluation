@@ -25,3 +25,12 @@ func CheckFail(ctx *gin.Context, data gin.H, msg string) {
 func HandleResponse(ctx *gin.Context, res ResponseStruct) {
 	ctx.JSON(res.HttpStatus, gin.H{"code": res.Code, "data": res.Data, "msg": res.Msg})
 }
+func NewResponse() ResponseStruct {
+	res := ResponseStruct{
+		HttpStatus: http.StatusOK,
+		Code:       SuccessCode,
+		Data:       nil,
+		Msg:        OK,
+	}
+	return res
+}
