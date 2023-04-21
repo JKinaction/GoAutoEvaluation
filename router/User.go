@@ -15,7 +15,7 @@ func GetUserRoutes(route *gin.RouterGroup) {
 
 	question := route.Group("question")
 	{
-		question.POST("/question", controller.QuestionGet)
+		question.GET("/question", controller.QuestionGet)
 		question.GET("/question-list", controller.QuestionList)
 	}
 }
