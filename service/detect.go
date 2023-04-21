@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -120,6 +121,8 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 		}
 	}
 	res.Data = gin.H{
+		"答案":   answerMatch[1:],
+		"输出":   userMatch[1:],
 		"data": "答案正确",
 	}
 	return res
@@ -129,11 +132,29 @@ func CheckFuncVarService(request dto.FuncVarDto) response.ResponseStruct {
 	res := response.NewResponse()
 	userid := request.Userid
 	questionid := request.Questionid
-	inVars := request.Vars
-	inFuncs := request.Funcs
+	inVars := strings.Fields(request.Vars)
+	inFuncs := strings.Fields(request.Funcs)
+	inSignal := strings.Fields(request.Signal)
+
 	code := request.Code
+	restr := ""
+	for i := 0; i < len(inSignal); i++ {
+		restr += `\` + inSignal[i]
+	}
+	restr = "[" + restr + "]"
+	re := regexp.MustCompile(restr) // 匹配符号
+	matches := re.FindAllString(code, -1)
+	matres := gin.H{}
+	for _, v := range matches {
+		matres[v] = nil
+	}
+	matches = nil
+	for k := range matres {
+		matches = append(matches, k)
+	}
 	//保存代码到本地
 	filename, err := SaveCode(userid, questionid, code)
+	fmt.Println(filename)
 	if err != nil {
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
@@ -148,24 +169,40 @@ func CheckFuncVarService(request dto.FuncVarDto) response.ResponseStruct {
 		res.Msg = response.SystemError
 		return res
 	}
-	for k := range vars {
-		for _, v := range inVars {
-			if k != v {
-				delete(vars, k)
+	fmt.Println(vars, funcs)
+	Vas := []string{}
+	Funs := []string{}
+	for _, v := range inVars {
+		i := 0
+		for k := range vars {
+			if k == v {
+				i = 1
+				break
 			}
+		}
+		if i == 0 {
+			Vas = append(Vas, v)
 		}
 	}
 
-	for k := range funcs {
-		for _, v := range inFuncs {
+	for _, v := range inFuncs {
+		i := 0
+		for k := range funcs {
 			if k == v {
-				delete(funcs, k)
+				i = 1
+				break
 			}
 		}
+		if i == 0 {
+			Funs = append(Funs, v)
+		}
 	}
+
 	res.Data = gin.H{
-		"未匹配到的funcs": funcs,
-		"未匹配到的vars":  vars,
+		"未匹配到的funcs": Funs,
+		"未匹配到的vars":  Vas,
+		"data":       "未匹配要素不为空则考核要求未完成",
+		"使用的禁用运算符":   matches,
 	}
 	return res
 }
@@ -253,5 +290,5 @@ func SearchFuncVar(filename string) (map[string]bool, map[string]bool, error) {
 			}
 		}
 	}
-	return nil, nil, err
+	return vars, funcs, nil
 }

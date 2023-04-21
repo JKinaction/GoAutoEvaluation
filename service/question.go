@@ -13,6 +13,36 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func InputAnswerList(dto dto.InputAnswerDto) response.ResponseStruct {
+	res := response.NewResponse()
+	var ialist []model.InputAnswer
+	err := common.GetDB().Where("questionid=?", dto.Questionid).Find(&ialist).Error
+	if err != nil {
+		logrus.Println(err)
+		res.HttpStatus = http.StatusInternalServerError
+		res.Code = response.ServerErrorCode
+		res.Msg = response.SystemError
+		return res
+	}
+
+	return res
+}
+
+func InputAnswerDelete(dto dto.InputAnswerIdDto) response.ResponseStruct {
+	res := response.NewResponse()
+	var ia model.InputAnswer
+	err := common.GetDB().Delete(&ia).Where("id=?", dto.Id).Error
+	if err != nil {
+		logrus.Println(err)
+		res.HttpStatus = http.StatusInternalServerError
+		res.Code = response.ServerErrorCode
+		res.Msg = response.SystemError
+		return res
+	}
+
+	return res
+}
+
 func InputAnswerPublish(dto dto.InputAnswerDto) response.ResponseStruct {
 	res := response.NewResponse()
 	var q model.Question

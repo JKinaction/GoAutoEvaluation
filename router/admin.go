@@ -17,7 +17,8 @@ func GetAdmin(route *gin.RouterGroup) {
 		ia := question.Group("/inputanswer")
 		{
 			ia.POST("/publish", controller.InputAnswerPublish)
-			// ia.GET("/list",controller.)
+			ia.GET("/list", controller.InputAnswerList)
+			ia.POST("delete", controller.InputAnswerDelete)
 		}
 	}
 }

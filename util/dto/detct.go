@@ -9,7 +9,8 @@ type CodeDto struct {
 type FuncVarDto struct {
 	Userid     int
 	Questionid int
-	Funcs      []string
-	Vars       []string
+	Funcs      string
+	Vars       string
+	Signal     string
 	Code       string
 }

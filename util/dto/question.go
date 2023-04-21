@@ -11,3 +11,7 @@ type QuestionDto struct {
 	Name       string
 	Contents   string
 }
+
+type InputAnswerIdDto struct {
+	Id int
+}

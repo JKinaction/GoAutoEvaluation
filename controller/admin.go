@@ -100,5 +100,20 @@ func InputAnswerList(ctx *gin.Context) {
 		response.Fail(ctx, nil, response.RequestError)
 		return
 	}
-
+	res := service.InputAnswerList(request)
+	response.HandleResponse(ctx, res)
+}
+func InputAnswerDelete(ctx *gin.Context) {
+	var request dto.InputAnswerIdDto
+	err := ctx.Bind(&request)
+	if err != nil {
+		response.Fail(ctx, nil, response.RequestError)
+		return
+	}
+	if request.Id == 0 {
+		response.Fail(ctx, nil, response.RequestError)
+		return
+	}
+	res := service.InputAnswerDelete(request)
+	response.HandleResponse(ctx, res)
 }
