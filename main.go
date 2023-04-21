@@ -2,9 +2,11 @@ package main
 
 import (
 	"domo1/router"
+	"domo1/util/common"
 )
 
-func mian() {
+func main() {
+	common.InitDB()
 	r := router.InitRouter()
-	r.Run(":8080")
+	r.Run(":9000")
 }

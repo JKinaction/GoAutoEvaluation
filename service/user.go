@@ -7,6 +7,7 @@ import (
 	"domo1/util/response"
 	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -28,6 +29,9 @@ func LoginService(login dto.LoginDto) response.ResponseStruct {
 		res.Code = response.CheckFailCode
 		res.Msg = response.NameOrPasswordError
 		return res
+	}
+	res.Data = gin.H{
+		"userid": user.ID,
 	}
 	return res
 }

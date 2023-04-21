@@ -32,7 +32,7 @@ func Register(ctx *gin.Context) {
 		return
 	}
 
-	if len(request.Password) < 6 {
+	if len(request.Password) < 3 {
 		response.CheckFail(ctx, nil, response.PasswordCheck)
 		return
 	}

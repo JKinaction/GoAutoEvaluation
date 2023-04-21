@@ -4,6 +4,7 @@ import "gorm.io/gorm"
 
 type Question struct {
 	gorm.Model
+	Name     string
 	Contents string
 }
 

@@ -8,5 +8,6 @@ type InputAnswerDto struct {
 
 type QuestionDto struct {
 	Questionid int
+	Name       string
 	Contents   string
 }

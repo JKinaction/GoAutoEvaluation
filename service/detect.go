@@ -2,7 +2,9 @@ package service
 
 import (
 	"bytes"
+	"domo1/util/common"
 	"domo1/util/dto"
+	"domo1/util/model"
 	"domo1/util/response"
 	"fmt"
 	"go/ast"
@@ -15,9 +17,10 @@ import (
 	"regexp"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
-// 运行路径./file/user/Userid/Questionid/code.out
+// 运行路径./file/user/Userid/Questionid/code.go
 // 输出路径./file/user/Userid/Questionid/user.out
 // 输入路径./file/question/Questionid/Intputanwserid/user.in
 // 对比路径./file/question/Questionid/Intputanwserid/answer.out
@@ -30,6 +33,7 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 
 	filename, err := SaveCode(userid, questionid, code)
 	if err != nil {
+		logrus.Println(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
@@ -42,16 +46,19 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 	out, err := os.Create(outpath)
 	defer out.Close()
 	if err != nil {
+		logrus.Println(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
 		return res
 	}
-	intputanwserid := 0 //从数据库获取_________________________________________________________
-	inpath := fmt.Sprintf("./file/question/%v/%v/user.in", questionid, intputanwserid)
+	var ia model.InputAnswer
+	common.GetDB().Where("questionid = ?", questionid).Where("path != ?", "").First(&ia) //-------------------------------
+	inpath := fmt.Sprintf("./file/question/%v/%v/user.in", questionid, ia.ID)
 	in, err := os.Open(inpath)
 	defer in.Close()
 	if err != nil {
+		logrus.Println(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
@@ -63,6 +70,7 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
+		logrus.Println(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
@@ -72,9 +80,10 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 		return res
 	}
 	// read answer file
-	answerpath := fmt.Sprintf("./file/question/%v/%v/answer.out", questionid, intputanwserid)
+	answerpath := fmt.Sprintf("./file/question/%v/%v/answer.out", questionid, ia.ID)
 	answerBytes, err := ioutil.ReadFile(answerpath)
 	if err != nil {
+		logrus.Println(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
@@ -85,6 +94,7 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 	// read user output file
 	userBytes, err := ioutil.ReadFile(outpath)
 	if err != nil {
+		logrus.Println(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
@@ -99,20 +109,24 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 	userMatch := r.FindStringSubmatch(user)
 	for i := 0; i < len(answerMatch) && i < len(userMatch); i++ {
 		// compare results
-		if answerMatch[0] != userMatch[0] {
+		if answerMatch[i] != userMatch[i] {
 			res.HttpStatus = http.StatusBadRequest
 			res.Code = response.FailCode
 			res.Msg = response.OutputIncorrect
+			res.Data = gin.H{
+				"data": "答案错误",
+			}
 			return res
 		}
 	}
-
+	res.Data = gin.H{
+		"data": "答案正确",
+	}
 	return res
 }
 
 func CheckFuncVarService(request dto.FuncVarDto) response.ResponseStruct {
 	res := response.NewResponse()
-
 	userid := request.Userid
 	questionid := request.Questionid
 	inVars := request.Vars
@@ -150,28 +164,37 @@ func CheckFuncVarService(request dto.FuncVarDto) response.ResponseStruct {
 		}
 	}
 	res.Data = gin.H{
-		"funcs": funcs,
-		"vars":  vars,
+		"未匹配到的funcs": funcs,
+		"未匹配到的vars":  vars,
 	}
 	return res
 }
 
 func SaveCode(userid, questionid int, code string) (string, error) {
-	filename := fmt.Sprintf("./file/user/%v/%v/code.out", userid, questionid)
-	file, err := os.Create(filename)
+
+	if err := os.MkdirAll(fmt.Sprintf("./file/user/%v/%v", userid, questionid), os.ModePerm); err != nil {
+		logrus.Println(err)
+		return "", err
+	}
+	filename := fmt.Sprintf("./file/user/%v/%v/code.go", userid, questionid)
+	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		return "", err
 	}
 	defer file.Close()
-	os.WriteFile(file.Name(), []byte(code), 0777)
+	if _, err := file.WriteString(code); err != nil {
+		return "", err
+	}
 	return filename, nil
 }
 
-func SearchFuncVar(filename string) (vars, funcs map[string]bool, err error) {
+func SearchFuncVar(filename string) (map[string]bool, map[string]bool, error) {
+	vars := make(map[string]bool)
+	funcs := make(map[string]bool)
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
 	for _, decl := range node.Decls {
@@ -230,5 +253,5 @@ func SearchFuncVar(filename string) (vars, funcs map[string]bool, err error) {
 			}
 		}
 	}
-	return
+	return nil, nil, err
 }

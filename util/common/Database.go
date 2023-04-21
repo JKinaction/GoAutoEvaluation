@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -13,18 +12,18 @@ import (
 var DB *gorm.DB
 
 func InitDB() {
-	host := viper.GetString("datasource.host")
-	port := viper.GetString("datasource.port")
-	database := viper.GetString("datasource.database")
-	username := viper.GetString("datasource.username")
-	password := viper.GetString("datasource.password")
-	args := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=true",
-		username,
-		password,
-		host,
-		port,
-		database)
-
+	// host := viper.GetString("datasource.host")
+	// port := viper.GetString("datasource.port")
+	// database := viper.GetString("datasource.database")
+	// username := viper.GetString("datasource.username")
+	// password := viper.GetString("datasource.password")
+	// args := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=true",
+	// 	username,
+	// 	password,
+	// 	host,
+	// 	port,
+	// 	database)
+	args := fmt.Sprintf("root:123@tcp(127.0.0.1:3306)/gae?charset=utf8&parseTime=true")
 	db, err := gorm.Open(mysql.Open(args), &gorm.Config{})
 	if err != nil {
 		panic(err)
@@ -39,7 +38,8 @@ func InitDB() {
 	sqlDB.SetConnMaxLifetime(time.Hour) //设置了连接可复用的最大时间
 	//数据库迁移
 	db.AutoMigrate(&model.User{})
-
+	db.AutoMigrate(&model.Question{})
+	db.AutoMigrate(&model.InputAnswer{})
 	DB = db
 }
 

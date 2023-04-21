@@ -8,8 +8,9 @@ import (
 
 func GetDetect(route *gin.RouterGroup) {
 	detect := route.Group("/detect")
+
 	{
 		detect.POST("/runcode", controller.RunCode)
-		detect.POST("")
+		detect.POST("/checkfuncvar", controller.CheckFuncVar)
 	}
 }
