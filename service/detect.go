@@ -111,11 +111,11 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 	for i := 0; i < len(answerMatch) && i < len(userMatch); i++ {
 		// compare results
 		if answerMatch[i] != userMatch[i] {
-			res.HttpStatus = http.StatusBadRequest
-			res.Code = response.FailCode
 			res.Msg = response.OutputIncorrect
 			res.Data = gin.H{
 				"data": "答案错误",
+				"答案":   answerMatch[1:],
+				"输出":   userMatch[1:],
 			}
 			return res
 		}
@@ -154,7 +154,6 @@ func CheckFuncVarService(request dto.FuncVarDto) response.ResponseStruct {
 	}
 	//保存代码到本地
 	filename, err := SaveCode(userid, questionid, code)
-	fmt.Println(filename)
 	if err != nil {
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
@@ -169,7 +168,6 @@ func CheckFuncVarService(request dto.FuncVarDto) response.ResponseStruct {
 		res.Msg = response.SystemError
 		return res
 	}
-	fmt.Println(vars, funcs)
 	Vas := []string{}
 	Funs := []string{}
 	for _, v := range inVars {

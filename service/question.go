@@ -109,7 +109,7 @@ func InputAnswerPublish(dto dto.InputAnswerDto) response.ResponseStruct {
 func QuestionGet(dto dto.QuestionDto) response.ResponseStruct {
 	res := response.NewResponse()
 	q := model.Question{}
-	err := common.GetDB().First(&q).Where("id=?", dto.Questionid).Error
+	err := common.GetDB().Where("id=?", dto.Questionid).First(&q).Error
 	if err != nil {
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
