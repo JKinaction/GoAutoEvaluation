@@ -72,11 +72,11 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 	err = cmd.Run()
 	if err != nil {
 		logrus.Println(err)
-		res.HttpStatus = http.StatusInternalServerError
-		res.Code = response.ServerErrorCode
-		res.Msg = response.SystemError
+		res.Code = response.FailCode
+		res.Msg = response.InputIncorrect
 		res.Data = gin.H{
-			"err": err,
+			"err":    err,
+			"stderr": stderr.String(),
 		}
 		return res
 	}
@@ -104,25 +104,22 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 	user := string(userBytes)
 
 	// match output with regex 改进方法按行读入，再每行split对比——————————————————————————————————————————————————
-	r := regexp.MustCompile(`([\w]+)`)
 
-	answerMatch := r.FindStringSubmatch(answer)
-	userMatch := r.FindStringSubmatch(user)
-	for i := 0; i < len(answerMatch) && i < len(userMatch); i++ {
+	for i := 0; i < len(answer) && i < len(user); i++ {
 		// compare results
-		if answerMatch[i] != userMatch[i] {
+		if answer[i] != user[i] {
 			res.Msg = response.OutputIncorrect
 			res.Data = gin.H{
 				"data": "答案错误",
-				"答案":   answerMatch[1:],
-				"输出":   userMatch[1:],
+				"答案":   answer,
+				"输出":   user,
 			}
 			return res
 		}
 	}
 	res.Data = gin.H{
-		"答案":   answerMatch[1:],
-		"输出":   userMatch[1:],
+		"答案":   answer,
+		"输出":   user,
 		"data": "答案正确",
 	}
 	return res
@@ -197,10 +194,10 @@ func CheckFuncVarService(request dto.FuncVarDto) response.ResponseStruct {
 	}
 
 	res.Data = gin.H{
-		"未匹配到的funcs": Funs,
-		"未匹配到的vars":  Vas,
-		"data":       "未匹配要素不为空则考核要求未完成",
-		"使用的禁用运算符":   matches,
+		"未匹配到的funcs":  Funs,
+		"未匹配到的vars":   Vas,
+		"data":        "未匹配要素不为空则考核要求未完成",
+		"代码中出现的禁用运算符": matches,
 	}
 	return res
 }
