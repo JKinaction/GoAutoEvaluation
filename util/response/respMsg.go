@@ -68,4 +68,5 @@ const (
 	OutputIncorrect = "输出与答案不匹配"
 	OutputCorrect   = "输出正确"
 	InputIncorrect  = "代码运行失败"
+	TimeoutError    = "运行超时"
 )

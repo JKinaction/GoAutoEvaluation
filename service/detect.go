@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"domo1/util/common"
 	"domo1/util/dto"
 	"domo1/util/model"
@@ -16,6 +17,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -69,60 +71,78 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 	cmd.Stdin = in
 	cmd.Stdout = out //运行用户代码输出
 	cmd.Stderr = &stderr
-	err = cmd.Run()
-	if err != nil {
-		logrus.Println(err)
+	Fail := make(chan error)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*7)
+	defer cancel()
+	go func() {
+		Fail <- cmd.Run()
+	}()
+	select {
+	case <-ctx.Done():
+		logrus.Println("运行超时")
 		res.Code = response.FailCode
-		res.Msg = response.InputIncorrect
+		res.Msg = response.TimeoutError
 		res.Data = gin.H{
-			"err":    err,
-			"stderr": stderr.String(),
+			"err": "运行超时",
 		}
+		cmd.Process.Kill()
 		return res
-	}
-	// read answer file
-	answerpath := fmt.Sprintf("./file/question/%v/%v/answer.out", questionid, ia.ID)
-	answerBytes, err := ioutil.ReadFile(answerpath)
-	if err != nil {
-		logrus.Println(err)
-		res.HttpStatus = http.StatusInternalServerError
-		res.Code = response.ServerErrorCode
-		res.Msg = response.SystemError
-		return res
-	}
-	answer := string(answerBytes)
-
-	// read user output file
-	userBytes, err := ioutil.ReadFile(outpath)
-	if err != nil {
-		logrus.Println(err)
-		res.HttpStatus = http.StatusInternalServerError
-		res.Code = response.ServerErrorCode
-		res.Msg = response.SystemError
-		return res
-	}
-	user := string(userBytes)
-
-	// match output with regex 改进方法按行读入，再每行split对比——————————————————————————————————————————————————
-
-	for i := 0; i < len(answer) && i < len(user); i++ {
-		// compare results
-		if answer[i] != user[i] {
-			res.Msg = response.OutputIncorrect
+	case err = <-Fail:
+		if err != nil {
+			logrus.Println(err)
+			res.Code = response.FailCode
+			res.Msg = response.InputIncorrect
 			res.Data = gin.H{
-				"data": "答案错误",
-				"答案":   answer,
-				"输出":   user,
+				"err":    err,
+				"stderr": stderr.String(),
 			}
 			return res
 		}
+		// read answer file
+		answerpath := fmt.Sprintf("./file/question/%v/%v/answer.out", questionid, ia.ID)
+		answerBytes, err := ioutil.ReadFile(answerpath)
+		if err != nil {
+			logrus.Println(err)
+			res.HttpStatus = http.StatusInternalServerError
+			res.Code = response.ServerErrorCode
+			res.Msg = response.SystemError
+			return res
+		}
+		answer := string(answerBytes)
+
+		// read user output file
+		userBytes, err := ioutil.ReadFile(outpath)
+		if err != nil {
+			logrus.Println(err)
+			res.HttpStatus = http.StatusInternalServerError
+			res.Code = response.ServerErrorCode
+			res.Msg = response.SystemError
+			return res
+		}
+		user := string(userBytes)
+
+		// match output with regex 改进方法按行读入，再每行split对比——————————————————————————————————————————————————
+
+		for i := 0; i < len(answer) && i < len(user); i++ {
+			// compare results
+			if answer[i] != user[i] {
+				res.Msg = response.OutputIncorrect
+				res.Data = gin.H{
+					"data": "答案错误",
+					"答案":   answer,
+					"输出":   user,
+				}
+				return res
+			}
+		}
+		res.Data = gin.H{
+			"答案":   answer,
+			"输出":   user,
+			"data": "答案正确",
+		}
+		return res
 	}
-	res.Data = gin.H{
-		"答案":   answer,
-		"输出":   user,
-		"data": "答案正确",
-	}
-	return res
 }
 
 func CheckFuncVarService(request dto.FuncVarDto) response.ResponseStruct {
@@ -135,19 +155,22 @@ func CheckFuncVarService(request dto.FuncVarDto) response.ResponseStruct {
 
 	code := request.Code
 	restr := ""
-	for i := 0; i < len(inSignal); i++ {
-		restr += `\` + inSignal[i]
-	}
-	restr = "[" + restr + "]"
-	re := regexp.MustCompile(restr) // 匹配符号
-	matches := re.FindAllString(code, -1)
 	matres := gin.H{}
-	for _, v := range matches {
-		matres[v] = nil
+	if len(inSignal) > 0 {
+		for i := 0; i < len(inSignal); i++ {
+			restr += `\` + inSignal[i]
+		}
+		restr = "[" + restr + "]"
+		re := regexp.MustCompile(restr) // 匹配符号
+		matches := re.FindAllString(code, -1)
+		for _, v := range matches {
+			matres[v] = nil
+		}
 	}
-	matches = nil
+
+	resmatches := []string{}
 	for k := range matres {
-		matches = append(matches, k)
+		resmatches = append(resmatches, k)
 	}
 	//保存代码到本地
 	filename, err := SaveCode(userid, questionid, code)
@@ -197,7 +220,7 @@ func CheckFuncVarService(request dto.FuncVarDto) response.ResponseStruct {
 		"未匹配到的funcs":  Funs,
 		"未匹配到的vars":   Vas,
 		"data":        "未匹配要素不为空则考核要求未完成",
-		"代码中出现的禁用运算符": matches,
+		"代码中出现的禁用运算符": resmatches,
 	}
 	return res
 }
