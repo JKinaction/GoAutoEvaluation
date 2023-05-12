@@ -18,7 +18,7 @@ func InputAnswerList(dto dto.InputAnswerDto) response.ResponseStruct {
 	var ialist []model.InputAnswer
 	err := common.GetDB().Where("questionid=?", dto.Questionid).Find(&ialist).Error
 	if err != nil {
-		logrus.Println(err)
+		logrus.Info(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
@@ -33,7 +33,7 @@ func InputAnswerDelete(dto dto.InputAnswerIdDto) response.ResponseStruct {
 	var ia model.InputAnswer
 	err := common.GetDB().Delete(&ia).Where("id=?", dto.Id).Error
 	if err != nil {
-		logrus.Println(err)
+		logrus.Info(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
@@ -49,7 +49,7 @@ func InputAnswerPublish(dto dto.InputAnswerDto) response.ResponseStruct {
 	questionid := dto.Questionid
 	common.GetDB().Where("id=?", questionid).First(&q)
 	if q.ID == 0 {
-		logrus.Println(q)
+		logrus.Info(q)
 		res.HttpStatus = http.StatusBadRequest
 		res.Code = response.FailCode
 		res.Msg = response.ParameterError
@@ -58,7 +58,7 @@ func InputAnswerPublish(dto dto.InputAnswerDto) response.ResponseStruct {
 	ia := model.InputAnswer{Questionid: questionid}
 	err := common.GetDB().Create(&ia).Error
 	if err != nil {
-		logrus.Println(err)
+		logrus.Info(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
@@ -69,7 +69,7 @@ func InputAnswerPublish(dto dto.InputAnswerDto) response.ResponseStruct {
 	dir := fmt.Sprintf("./file/question/%v/%v/", questionid, ia.ID)
 
 	if err := os.MkdirAll(fmt.Sprintf("./file/question/%v/%v", questionid, ia.ID), os.ModePerm); err != nil {
-		logrus.Println(err)
+		logrus.Info(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
@@ -77,7 +77,7 @@ func InputAnswerPublish(dto dto.InputAnswerDto) response.ResponseStruct {
 	}
 	infile, err := os.Create(dir + "user.in")
 	if err != nil {
-		logrus.Println(err)
+		logrus.Info(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
@@ -87,7 +87,7 @@ func InputAnswerPublish(dto dto.InputAnswerDto) response.ResponseStruct {
 	os.WriteFile(dir+"user.in", []byte(dto.Input), 0777)
 	answerfile, err := os.Create(dir + "answer.out")
 	if err != nil {
-		logrus.Println(err)
+		logrus.Info(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
@@ -97,7 +97,7 @@ func InputAnswerPublish(dto dto.InputAnswerDto) response.ResponseStruct {
 	os.WriteFile(dir+"answer.out", []byte(dto.Answer), 0777)
 	err = common.GetDB().Model(&model.InputAnswer{}).Where("id=?", ia.ID).Update("path", fmt.Sprintf("./file/question/%v/%v", questionid, ia.ID)).Error
 	if err != nil {
-		logrus.Println(err)
+		logrus.Info(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError

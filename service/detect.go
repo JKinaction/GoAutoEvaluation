@@ -36,7 +36,7 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 
 	filename, err := SaveCode(userid, questionid, code)
 	if err != nil {
-		logrus.Println(err)
+		logrus.Info(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
@@ -49,7 +49,7 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 	out, err := os.Create(outpath)
 	defer out.Close()
 	if err != nil {
-		logrus.Println(err)
+		logrus.Info(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
@@ -61,7 +61,7 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 	in, err := os.Open(inpath)
 	defer in.Close()
 	if err != nil {
-		logrus.Println(err)
+		logrus.Info(err)
 		res.HttpStatus = http.StatusInternalServerError
 		res.Code = response.ServerErrorCode
 		res.Msg = response.SystemError
@@ -80,7 +80,7 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 	}()
 	select {
 	case <-ctx.Done():
-		logrus.Println("运行超时")
+		logrus.Info("运行超时")
 		res.Code = response.FailCode
 		res.Msg = response.TimeoutError
 		res.Data = gin.H{
@@ -90,7 +90,7 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 		return res
 	case err = <-Fail:
 		if err != nil {
-			logrus.Println(err)
+			logrus.Info(err)
 			res.Code = response.FailCode
 			res.Msg = response.InputIncorrect
 			res.Data = gin.H{
@@ -103,7 +103,7 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 		answerpath := fmt.Sprintf("./file/question/%v/%v/answer.out", questionid, ia.ID)
 		answerBytes, err := ioutil.ReadFile(answerpath)
 		if err != nil {
-			logrus.Println(err)
+			logrus.Info(err)
 			res.HttpStatus = http.StatusInternalServerError
 			res.Code = response.ServerErrorCode
 			res.Msg = response.SystemError
@@ -114,7 +114,7 @@ func RuncodeService(request dto.CodeDto) response.ResponseStruct {
 		// read user output file
 		userBytes, err := ioutil.ReadFile(outpath)
 		if err != nil {
-			logrus.Println(err)
+			logrus.Info(err)
 			res.HttpStatus = http.StatusInternalServerError
 			res.Code = response.ServerErrorCode
 			res.Msg = response.SystemError
@@ -228,7 +228,7 @@ func CheckFuncVarService(request dto.FuncVarDto) response.ResponseStruct {
 func SaveCode(userid, questionid int, code string) (string, error) {
 
 	if err := os.MkdirAll(fmt.Sprintf("./file/user/%v/%v", userid, questionid), os.ModePerm); err != nil {
-		logrus.Println(err)
+		logrus.Info(err)
 		return "", err
 	}
 	filename := fmt.Sprintf("./file/user/%v/%v/code.go", userid, questionid)
