@@ -10,6 +10,7 @@ func GetAdmin(route *gin.RouterGroup) {
 	admin := route.Group("/admin")
 	question := admin.Group("/question")
 	{
+		question.GET("/question-list", controller.QuestionList)
 		question.POST("/get", controller.QuestionGet)
 		question.POST("/publish", controller.QuestionPublish)
 		question.POST("/update", controller.QuestionUpdate)

@@ -23,7 +23,7 @@ func InitDB() {
 	// 	host,
 	// 	port,
 	// 	database)
-	args := fmt.Sprintf("root:123@tcp(127.0.0.1:3306)/gae?charset=utf8&parseTime=true")
+	args := fmt.Sprintf("root:123@tcp(mysql:3306)/gae?charset=utf8&parseTime=true")
 	db, err := gorm.Open(mysql.Open(args), &gorm.Config{})
 	if err != nil {
 		panic(err)
