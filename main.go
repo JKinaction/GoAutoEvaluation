@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	logger.InitLogger()
 	common.InitDB()
 	r := router.InitRouter()
 	r.Run(":9000")
