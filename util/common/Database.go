@@ -1,10 +1,12 @@
 package common
 
 import (
+	"domo1/config"
 	"domo1/util/model"
 	"fmt"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -12,18 +14,19 @@ import (
 var DB *gorm.DB
 
 func InitDB() {
-	// host := viper.GetString("datasource.host")
-	// port := viper.GetString("datasource.port")
-	// database := viper.GetString("datasource.database")
-	// username := viper.GetString("datasource.username")
-	// password := viper.GetString("datasource.password")
-	// args := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=true",
-	// 	username,
-	// 	password,
-	// 	host,
-	// 	port,
-	// 	database)
-	args := fmt.Sprintf("root:123@tcp(mysql:3306)/gae?charset=utf8&parseTime=true")
+	host := config.Conf.Mysql.Host
+	port := config.Conf.Mysql.Port
+	database := config.Conf.Mysql.Database
+	username := config.Conf.Mysql.Username
+	password := config.Conf.Mysql.Password
+	args := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=true",
+		username,
+		password,
+		host,
+		port,
+		database)
+	// args := fmt.Sprintf("root:123@tcp(mysql:3306)/gae?charset=utf8&parseTime=true")
+	logrus.Info(args)
 	db, err := gorm.Open(mysql.Open(args), &gorm.Config{})
 	if err != nil {
 		panic(err)
@@ -41,6 +44,7 @@ func InitDB() {
 	db.AutoMigrate(&model.Question{})
 	db.AutoMigrate(&model.InputAnswer{})
 	DB = db
+	logrus.Info("数据库初始化成功")
 }
 
 func GetDB() *gorm.DB {

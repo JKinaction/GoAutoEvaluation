@@ -1,0 +1,14 @@
+mysql:
+  host: 127.0.0.1
+  port: 3306
+  database: gae
+  username: root
+  password: 123
+
+logconfig:
+  dir: "./logs"
+  name: ".log"
+  level: "debug"
+  max_size: 100
+  max_backups: 10
+  max_age: 30
